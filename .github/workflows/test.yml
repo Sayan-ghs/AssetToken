@@ -17,22 +17,34 @@ jobs:
     permissions:
       contents: read
     steps:
+      # 1️⃣ Checkout repo with submodules
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
           submodules: recursive
+          fetch-depth: 0          # fetch full history, avoids shallow clone issues
 
+      # 2️⃣ Initialize and update submodules explicitly
+      - name: Update submodules
+        run: git submodule update --init --recursive
+
+      # 3️⃣ Install Foundry
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
 
+      # 4️⃣ Check Forge version
       - name: Show Forge version
         run: forge --version
 
+      # 5️⃣ Check formatting
       - name: Run Forge fmt
         run: forge fmt --check
 
+      # 6️⃣ Build contracts
       - name: Run Forge build
         run: forge build --sizes
 
+      # 7️⃣ Run all tests
       - name: Run Forge tests
         run: forge test -vvv
+
