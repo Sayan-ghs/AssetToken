@@ -22,7 +22,7 @@ contract ProtocolHandler is Test {
 
     address public seller;
     address[] public actors;
-    
+
     // Ghost variables for tracking state
     uint256 public ghost_totalETHDeposited;
     uint256 public ghost_totalETHWithdrawn;
@@ -74,10 +74,10 @@ contract ProtocolHandler is Test {
         // Bound inputs
         uint256 actorIndex = actorSeed % actors.length;
         address actor = actors[actorIndex];
-        
+
         // Bound ETH amount to reasonable values (0.01 to 10 ETH)
         ethAmount = bound(ethAmount, 0.01 ether, 10 ether);
-        
+
         // Check if actor has enough balance
         if (actor.balance < ethAmount) {
             return;
@@ -87,10 +87,10 @@ contract ProtocolHandler is Test {
         try primarySale.getSale(address(token)) returns (PrimarySale.Sale memory sale) {
             if (!sale.active) return;
             if (block.timestamp < sale.startTime || block.timestamp >= sale.endTime) return;
-            
+
             uint256 maxTokens = sale.tokensForSale - sale.tokensSold;
             if (maxTokens == 0) return;
-            
+
             uint256 tokenAmount = ethAmount / sale.pricePerToken;
             if (tokenAmount == 0 || tokenAmount > maxTokens) return;
 
@@ -99,7 +99,7 @@ contract ProtocolHandler is Test {
 
             vm.prank(actor);
             primarySale.purchaseTokens{value: totalCost}(address(token), tokenAmount);
-            
+
             callCount_purchaseTokens++;
             ghost_totalETHDeposited += totalCost;
             ghost_balances[actor] = token.balanceOf(actor);
@@ -115,9 +115,9 @@ contract ProtocolHandler is Test {
     function swapETHForTokens(uint256 actorSeed, uint256 ethAmount) public {
         uint256 actorIndex = actorSeed % actors.length;
         address actor = actors[actorIndex];
-        
+
         ethAmount = bound(ethAmount, 0.01 ether, 5 ether);
-        
+
         if (actor.balance < ethAmount) return;
 
         (uint256 reserveToken, uint256 reserveETH) = ammPool.getReserves();
@@ -140,10 +140,10 @@ contract ProtocolHandler is Test {
     function swapTokensForETH(uint256 actorSeed, uint256 tokenAmount) public {
         uint256 actorIndex = actorSeed % actors.length;
         address actor = actors[actorIndex];
-        
+
         uint256 actorBalance = token.balanceOf(actor);
         if (actorBalance == 0) return;
-        
+
         tokenAmount = bound(tokenAmount, 0.01 ether, actorBalance);
 
         (uint256 reserveToken, uint256 reserveETH) = ammPool.getReserves();
@@ -151,7 +151,7 @@ contract ProtocolHandler is Test {
 
         vm.startPrank(actor);
         token.approve(address(ammPool), tokenAmount);
-        
+
         try ammPool.swapTokensForETH(tokenAmount, 0) {
             callCount_swapTokensForETH++;
             uint256 ethReceived = actor.balance;
@@ -170,12 +170,12 @@ contract ProtocolHandler is Test {
     function addLiquidity(uint256 actorSeed, uint256 tokenAmount, uint256 ethAmount) public {
         uint256 actorIndex = actorSeed % actors.length;
         address actor = actors[actorIndex];
-        
+
         tokenAmount = bound(tokenAmount, 1 ether, 100 ether);
         ethAmount = bound(ethAmount, 0.1 ether, 10 ether);
-        
+
         if (actor.balance < ethAmount) return;
-        
+
         uint256 actorTokenBalance = token.balanceOf(actor);
         if (actorTokenBalance < tokenAmount) {
             // Transfer tokens from seller to actor
@@ -189,7 +189,7 @@ contract ProtocolHandler is Test {
 
         vm.startPrank(actor);
         token.approve(address(ammPool), tokenAmount);
-        
+
         try ammPool.addLiquidity{value: ethAmount}(tokenAmount, 0, 0) {
             callCount_addLiquidity++;
             ghost_totalETHDeposited += ethAmount;
@@ -207,10 +207,10 @@ contract ProtocolHandler is Test {
     function removeLiquidity(uint256 actorSeed, uint256 liquidityPercent) public {
         uint256 actorIndex = actorSeed % actors.length;
         address actor = actors[actorIndex];
-        
+
         uint256 lpBalance = ammPool.balanceOf(actor);
         if (lpBalance == 0) return;
-        
+
         liquidityPercent = bound(liquidityPercent, 1, 100);
         uint256 liquidityToRemove = (lpBalance * liquidityPercent) / 100;
         if (liquidityToRemove == 0) return;
@@ -231,7 +231,7 @@ contract ProtocolHandler is Test {
     function registerAsset(uint256 actorSeed, uint256 supply) public {
         uint256 actorIndex = actorSeed % actors.length;
         address actor = actors[actorIndex];
-        
+
         supply = bound(supply, 1000 ether, 1_000_000 ether);
 
         vm.prank(actor);

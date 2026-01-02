@@ -14,7 +14,7 @@ import "./ProtocolHandler.sol";
  * @notice Invariant tests for the entire AssetToken protocol
  * @dev Tests critical invariants that must hold under ANY sequence of operations.
  *      Uses Handler contract for stateful fuzzing.
- * 
+ *
  * Invariants tested:
  * 1. Token total supply never changes
  * 2. Sum of balances equals total supply
@@ -101,12 +101,9 @@ contract ProtocolInvariant is Test {
      * @dev Ensures no tokens are created or destroyed
      */
     function invariant_sumOfBalancesEqualsTotalSupply() public view {
-        uint256 sumOfBalances = token.balanceOf(seller)
-            + token.balanceOf(address(primarySale))
-            + token.balanceOf(address(ammPool))
-            + token.balanceOf(handler.actors(0))
-            + token.balanceOf(handler.actors(1))
-            + token.balanceOf(handler.actors(2))
+        uint256 sumOfBalances = token.balanceOf(seller) + token.balanceOf(address(primarySale))
+            + token.balanceOf(address(ammPool)) + token.balanceOf(handler.actors(0))
+            + token.balanceOf(handler.actors(1)) + token.balanceOf(handler.actors(2))
             + token.balanceOf(handler.actors(3));
 
         // Allow for tokens held by other addresses (e.g., new assets created in handler)
@@ -123,7 +120,7 @@ contract ProtocolInvariant is Test {
      */
     function invariant_reservesNeverNegative() public view {
         (uint256 reserveToken, uint256 reserveETH) = ammPool.getReserves();
-        
+
         uint256 totalSupply = ammPool.totalSupply();
         if (totalSupply > 0) {
             // If there's liquidity, both reserves must be positive
@@ -138,7 +135,7 @@ contract ProtocolInvariant is Test {
      */
     function invariant_reservesMatchActualBalances() public view {
         (uint256 reserveToken, uint256 reserveETH) = ammPool.getReserves();
-        
+
         uint256 actualTokenBalance = token.balanceOf(address(ammPool));
         uint256 actualETHBalance = address(ammPool).balance;
 
@@ -157,22 +154,19 @@ contract ProtocolInvariant is Test {
      */
     function invariant_constantProductNeverDecreases() public view {
         (uint256 reserveToken, uint256 reserveETH) = ammPool.getReserves();
-        
+
         if (reserveToken == 0 || reserveETH == 0) {
             // Pool is empty, skip check
             return;
         }
 
         uint256 currentK = reserveToken * reserveETH;
-        
+
         // K should never decrease significantly (allow 0.1% for rounding)
         // In practice, K should increase due to 0.3% swap fees
         uint256 minAcceptableK = (initialK * 999) / 1000;
-        
-        assertTrue(
-            currentK >= minAcceptableK,
-            "K-invariant decreased beyond acceptable rounding"
-        );
+
+        assertTrue(currentK >= minAcceptableK, "K-invariant decreased beyond acceptable rounding");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -205,10 +199,7 @@ contract ProtocolInvariant is Test {
         uint256 totalSupply = ammPool.totalSupply();
         uint256 maxReasonableSupply = 1_000_000_000 ether; // 1 billion LP tokens
 
-        assertTrue(
-            totalSupply <= maxReasonableSupply,
-            "LP token supply exceeds maximum reasonable amount"
-        );
+        assertTrue(totalSupply <= maxReasonableSupply, "LP token supply exceeds maximum reasonable amount");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -220,21 +211,14 @@ contract ProtocolInvariant is Test {
      * @dev No tokens should be created or destroyed
      */
     function invariant_noTokensCreatedFromNothing() public view {
-        uint256 totalTokensInSystem = 
-            token.balanceOf(seller) +
-            token.balanceOf(address(ammPool)) +
-            token.balanceOf(address(primarySale)) +
-            token.balanceOf(handler.actors(0)) +
-            token.balanceOf(handler.actors(1)) +
-            token.balanceOf(handler.actors(2)) +
-            token.balanceOf(handler.actors(3));
+        uint256 totalTokensInSystem = token.balanceOf(seller) + token.balanceOf(address(ammPool))
+            + token.balanceOf(address(primarySale)) + token.balanceOf(handler.actors(0))
+            + token.balanceOf(handler.actors(1)) + token.balanceOf(handler.actors(2))
+            + token.balanceOf(handler.actors(3));
 
         // Account for tokens in newly created assets (from registerAsset)
         // These are separate tokens, not part of the original supply
-        assertTrue(
-            totalTokensInSystem <= INITIAL_SUPPLY,
-            "Total tokens in tracked addresses exceeds initial supply"
-        );
+        assertTrue(totalTokensInSystem <= INITIAL_SUPPLY, "Total tokens in tracked addresses exceeds initial supply");
     }
 
     /**
@@ -244,15 +228,12 @@ contract ProtocolInvariant is Test {
     function invariant_noETHCreatedFromNothing() public view {
         uint256 ethInAMM = address(ammPool).balance;
         uint256 ethInPrimarySale = address(primarySale).balance;
-        
+
         // ETH in system should not exceed reasonable bounds
         // Actors started with 1000 ETH each (4 actors = 4000 ETH)
         uint256 maxETH = 4000 ether + 100 ether; // Initial funding + setup
-        
-        assertTrue(
-            ethInAMM + ethInPrimarySale <= maxETH,
-            "ETH in contracts exceeds maximum possible"
-        );
+
+        assertTrue(ethInAMM + ethInPrimarySale <= maxETH, "ETH in contracts exceeds maximum possible");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -268,14 +249,11 @@ contract ProtocolInvariant is Test {
         // LPToken.mint() has onlyPool modifier
         // We verify by checking that all LP tokens are from valid operations
         uint256 totalLPSupply = ammPool.totalSupply();
-        
+
         // Sum of all actor LP balances should not exceed total supply
-        uint256 sumLPBalances = 
-            ammPool.balanceOf(seller) +
-            ammPool.balanceOf(handler.actors(0)) +
-            ammPool.balanceOf(handler.actors(1)) +
-            ammPool.balanceOf(handler.actors(2)) +
-            ammPool.balanceOf(handler.actors(3));
+        uint256 sumLPBalances = ammPool.balanceOf(seller) + ammPool.balanceOf(handler.actors(0))
+            + ammPool.balanceOf(handler.actors(1)) + ammPool.balanceOf(handler.actors(2))
+            + ammPool.balanceOf(handler.actors(3));
 
         assertEq(sumLPBalances, totalLPSupply, "LP balance mismatch indicates unauthorized minting");
     }
@@ -286,7 +264,7 @@ contract ProtocolInvariant is Test {
      */
     function invariant_assetRegistryCountValid() public view {
         uint256 count = registry.assetCount();
-        
+
         // Count should never decrease
         // Count should be within reasonable bounds
         assertTrue(count <= 1000, "Asset count exceeds reasonable maximum");
@@ -302,15 +280,15 @@ contract ProtocolInvariant is Test {
      */
     function invariant_ammPricingConsistent() public view {
         (uint256 reserveToken, uint256 reserveETH) = ammPool.getReserves();
-        
+
         if (reserveToken == 0 || reserveETH == 0) return;
 
         // For a 1 ETH swap, verify pricing is consistent
         uint256 amountIn = 1 ether;
         if (amountIn >= reserveETH) return; // Skip if would drain reserves
-        
+
         uint256 expectedOut = ammPool.getAmountOut(amountIn, true);
-        
+
         // Expected output should be less than reserve (can't drain pool)
         assertTrue(expectedOut < reserveToken, "AMM pricing allows reserve drain");
         assertTrue(expectedOut > 0 || amountIn == 0, "AMM pricing returns zero unexpectedly");
@@ -339,14 +317,10 @@ contract ProtocolInvariant is Test {
      */
     function invariant_primarySaleConsistent() public view {
         try primarySale.getSale(address(token)) returns (PrimarySale.Sale memory sale) {
+            assertTrue(sale.tokensSold <= sale.tokensForSale, "Tokens sold exceeds tokens for sale");
+
             assertTrue(
-                sale.tokensSold <= sale.tokensForSale,
-                "Tokens sold exceeds tokens for sale"
-            );
-            
-            assertTrue(
-                sale.fundsWithdrawn <= sale.tokensSold * sale.pricePerToken,
-                "Funds withdrawn exceeds funds raised"
+                sale.fundsWithdrawn <= sale.tokensSold * sale.pricePerToken, "Funds withdrawn exceeds funds raised"
             );
         } catch {
             // Sale doesn't exist, which is fine
@@ -359,14 +333,11 @@ contract ProtocolInvariant is Test {
      */
     function invariant_ammPoolInternalConsistency() public view {
         uint256 totalSupply = ammPool.totalSupply();
-        
+
         // Sum all known LP balances
-        uint256 sumBalances = 
-            ammPool.balanceOf(seller) +
-            ammPool.balanceOf(handler.actors(0)) +
-            ammPool.balanceOf(handler.actors(1)) +
-            ammPool.balanceOf(handler.actors(2)) +
-            ammPool.balanceOf(handler.actors(3));
+        uint256 sumBalances = ammPool.balanceOf(seller) + ammPool.balanceOf(handler.actors(0))
+            + ammPool.balanceOf(handler.actors(1)) + ammPool.balanceOf(handler.actors(2))
+            + ammPool.balanceOf(handler.actors(3));
 
         // Sum should equal total supply (accounting for all holders)
         assertEq(sumBalances, totalSupply, "LP token accounting mismatch");

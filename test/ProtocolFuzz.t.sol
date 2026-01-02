@@ -78,38 +78,30 @@ contract ProtocolFuzz is Test {
      *      - No negative balances
      *      - ETH conservation (sum of balances remains constant)
      */
-    function testFuzz_PurchaseTokensRandomAmounts(uint256 pricePerToken, uint256 tokenAmount, uint256 ethSent)
-        public
-    {
+    function testFuzz_PurchaseTokensRandomAmounts(uint256 pricePerToken, uint256 tokenAmount, uint256 ethSent) public {
         // Bound inputs to reasonable values to avoid gas exhaustion
         // Price: 1 wei to 1 ether (represents realistic token prices)
         vm.assume(pricePerToken > 0 && pricePerToken <= 1 ether);
-        
+
         // Token amount: 1 to 10,000 tokens
         vm.assume(tokenAmount > 0 && tokenAmount <= 10_000 ether);
-        
+
         // Ensure seller has enough tokens
         vm.assume(tokenAmount <= INITIAL_TOKEN_SUPPLY);
 
         // Calculate expected cost and bound ethSent
         uint256 expectedCost = pricePerToken * tokenAmount;
-        
+
         // Prevent overflow in cost calculation
         vm.assume(expectedCost / pricePerToken == tokenAmount);
         vm.assume(expectedCost <= MAX_REASONABLE_ETH);
-        
+
         // ETH sent should be at least the cost (can be more for refund testing)
         vm.assume(ethSent >= expectedCost && ethSent <= expectedCost + 100 ether);
 
         // Create sale
         vm.prank(seller);
-        primarySale.createSale(
-            address(token),
-            pricePerToken,
-            tokenAmount,
-            block.timestamp,
-            block.timestamp + 1 days
-        );
+        primarySale.createSale(address(token), pricePerToken, tokenAmount, block.timestamp, block.timestamp + 1 days);
 
         // Record initial balances for conservation check
         uint256 sellerTokensBefore = token.balanceOf(seller);
@@ -131,7 +123,7 @@ contract ProtocolFuzz is Test {
         // Verify sale state
         PrimarySale.Sale memory sale = primarySale.getSale(address(token));
         assertEq(sale.tokensSold, tokenAmount, "Tokens sold should be tracked");
-        
+
         // Safety: No negative balances (implicit in uint256, but verify no underflow)
         assertTrue(token.balanceOf(seller) <= sellerTokensBefore, "No underflow in seller balance");
     }
@@ -158,13 +150,7 @@ contract ProtocolFuzz is Test {
         vm.assume(expectedCost / pricePerToken == tokenAmount); // Overflow check
 
         vm.prank(seller);
-        primarySale.createSale(
-            address(token),
-            pricePerToken,
-            tokenAmount,
-            block.timestamp,
-            block.timestamp + 1 days
-        );
+        primarySale.createSale(address(token), pricePerToken, tokenAmount, block.timestamp, block.timestamp + 1 days);
 
         vm.deal(buyer, expectedCost + 1 ether);
 
@@ -191,7 +177,7 @@ contract ProtocolFuzz is Test {
         // Bound initial liquidity to reasonable values using bound()
         initialTokens = bound(initialTokens, 1 ether, MAX_REASONABLE_TOKENS);
         initialETH = bound(initialETH, 1 ether, MAX_REASONABLE_ETH);
-        
+
         // Swap amount: 0.01 ETH to initial ETH / 2 (prevent drain)
         swapAmount = bound(swapAmount, 0.01 ether, initialETH / 2);
 
@@ -199,12 +185,12 @@ contract ProtocolFuzz is Test {
         vm.startPrank(liquidityProvider);
         token.approve(address(ammPool), type(uint256).max);
         vm.deal(liquidityProvider, initialETH + 100 ether);
-        
+
         // Transfer tokens to liquidity provider
         vm.stopPrank();
         vm.prank(seller);
         token.transfer(liquidityProvider, initialTokens);
-        
+
         vm.prank(liquidityProvider);
         ammPool.addLiquidity{value: initialETH}(initialTokens, 0, 0);
         vm.stopPrank();
@@ -215,7 +201,7 @@ contract ProtocolFuzz is Test {
 
         // Calculate expected output
         uint256 expectedAmountOut = ammPool.getAmountOut(swapAmount, true);
-        
+
         // Skip test if output would drain reserves or is zero
         if (expectedAmountOut == 0 || expectedAmountOut >= reserveTokenBefore) {
             return;
@@ -228,10 +214,10 @@ contract ProtocolFuzz is Test {
 
         // Verify reserves updated correctly
         (uint256 reserveTokenAfter, uint256 reserveETHAfter) = ammPool.getReserves();
-        
+
         assertEq(reserveETHAfter, reserveETHBefore + swapAmount, "ETH reserve should increase by swap amount");
         assertTrue(reserveTokenAfter < reserveTokenBefore, "Token reserve should decrease");
-        
+
         // Verify K-invariant (should increase or stay same due to fees)
         uint256 kAfter = reserveTokenAfter * reserveETHAfter;
         assertTrue(kAfter >= kBefore, "K-invariant should not decrease (fees increase K)");
@@ -252,14 +238,14 @@ contract ProtocolFuzz is Test {
         // Bound initial liquidity using bound()
         initialTokens = bound(initialTokens, 1 ether, MAX_REASONABLE_TOKENS);
         initialETH = bound(initialETH, 1 ether, MAX_REASONABLE_ETH);
-        
+
         // Swap amount: 0.01 tokens to initial tokens / 2 (prevent drain)
         swapAmount = bound(swapAmount, 0.01 ether, initialTokens / 2);
 
         // Setup: Add initial liquidity
         vm.prank(seller);
         token.transfer(liquidityProvider, initialTokens + swapAmount); // Extra for swap
-        
+
         vm.startPrank(liquidityProvider);
         token.approve(address(ammPool), type(uint256).max);
         vm.deal(liquidityProvider, initialETH + 100 ether);
@@ -276,7 +262,7 @@ contract ProtocolFuzz is Test {
 
         // Calculate expected output
         uint256 expectedAmountOut = ammPool.getAmountOut(swapAmount, false);
-        
+
         // Skip test if output would drain reserves or is zero
         if (expectedAmountOut == 0 || expectedAmountOut >= reserveETHBefore) {
             return;
@@ -292,10 +278,10 @@ contract ProtocolFuzz is Test {
 
         // Verify reserves updated correctly
         (uint256 reserveTokenAfter, uint256 reserveETHAfter) = ammPool.getReserves();
-        
+
         assertEq(reserveTokenAfter, reserveTokenBefore + swapAmount, "Token reserve should increase");
         assertTrue(reserveETHAfter < reserveETHBefore, "ETH reserve should decrease");
-        
+
         // Verify K-invariant (should increase or stay same due to fees)
         uint256 kAfter = reserveTokenAfter * reserveETHAfter;
         assertTrue(kAfter >= kBefore, "K-invariant should not decrease");
@@ -320,7 +306,7 @@ contract ProtocolFuzz is Test {
         // Bound to reasonable values
         vm.assume(tokenAmount >= 1 ether && tokenAmount <= MAX_REASONABLE_TOKENS);
         vm.assume(ethAmount >= 1 ether && ethAmount <= MAX_REASONABLE_ETH);
-        
+
         // Ensure no overflow in sqrt calculation
         uint256 product = tokenAmount * ethAmount;
         vm.assume(product / tokenAmount == ethAmount);
@@ -334,9 +320,9 @@ contract ProtocolFuzz is Test {
         // Add liquidity
         vm.startPrank(liquidityProvider);
         token.approve(address(ammPool), tokenAmount);
-        
+
         uint256 totalSupplyBefore = ammPool.totalSupply();
-        
+
         ammPool.addLiquidity{value: ethAmount}(tokenAmount, 0, 0);
         vm.stopPrank();
 
@@ -348,7 +334,7 @@ contract ProtocolFuzz is Test {
         // Verify LP tokens minted
         uint256 totalSupplyAfter = ammPool.totalSupply();
         assertTrue(totalSupplyAfter > totalSupplyBefore, "Total supply should increase");
-        
+
         // For first liquidity, LP = sqrt(tokenAmount * ethAmount)
         if (totalSupplyBefore == 0) {
             uint256 expectedLP = _sqrt(tokenAmount * ethAmount);
@@ -373,7 +359,7 @@ contract ProtocolFuzz is Test {
         // Bound initial liquidity using bound()
         initialTokens = bound(initialTokens, 1 ether, 10_000 ether);
         initialETH = bound(initialETH, 1 ether, 10_000 ether);
-        
+
         // Bound second liquidity
         secondTokens = bound(secondTokens, 0.1 ether, 1_000 ether);
         secondETH = bound(secondETH, 0.1 ether, 1_000 ether);
@@ -418,9 +404,7 @@ contract ProtocolFuzz is Test {
      *      - Reserve updates
      *      - Balance checks
      */
-    function testFuzz_RemoveLiquidity(uint256 initialTokens, uint256 initialETH, uint256 liquidityToRemove)
-        public
-    {
+    function testFuzz_RemoveLiquidity(uint256 initialTokens, uint256 initialETH, uint256 liquidityToRemove) public {
         // Bound initial liquidity
         vm.assume(initialTokens >= 10 ether && initialTokens <= MAX_REASONABLE_TOKENS);
         vm.assume(initialETH >= 10 ether && initialETH <= MAX_REASONABLE_ETH);
@@ -437,7 +421,7 @@ contract ProtocolFuzz is Test {
         ammPool.addLiquidity{value: initialETH}(initialTokens, 0, 0);
 
         uint256 lpBalance = ammPool.balanceOf(liquidityProvider);
-        
+
         // Bound liquidity to remove (1% to 100% of balance)
         vm.assume(liquidityToRemove > 0 && liquidityToRemove <= lpBalance);
 
@@ -464,9 +448,7 @@ contract ProtocolFuzz is Test {
         assertEq(reserveETHAfter, reserveETHBefore - expectedETH, "ETH reserve should decrease");
 
         // Verify LP received tokens and ETH
-        assertEq(
-            token.balanceOf(liquidityProvider), traderTokensBefore + expectedTokens, "LP should receive tokens"
-        );
+        assertEq(token.balanceOf(liquidityProvider), traderTokensBefore + expectedTokens, "LP should receive tokens");
         assertEq(liquidityProvider.balance, traderETHBefore + expectedETH, "LP should receive ETH");
 
         // Safety: Reserves should never go negative
@@ -479,14 +461,12 @@ contract ProtocolFuzz is Test {
      * @dev Critical invariant: K = reserveToken * reserveETH should never decrease
      *      (except for small rounding, and should increase due to fees)
      */
-    function testFuzz_AMMInvariantPreserved(uint256 initialTokens, uint256 initialETH, uint256 swapAmount)
-        public
-    {
+    function testFuzz_AMMInvariantPreserved(uint256 initialTokens, uint256 initialETH, uint256 swapAmount) public {
         // Setup initial liquidity using bound()
         initialTokens = bound(initialTokens, 10 ether, 50_000 ether);
         initialETH = bound(initialETH, 10 ether, 50_000 ether);
         swapAmount = bound(swapAmount, 0.1 ether, 5 ether);
-        
+
         // Check for overflow and skip if needed
         if (initialTokens > type(uint256).max / initialETH) {
             return;
@@ -681,7 +661,7 @@ contract ProtocolFuzz is Test {
         vm.assume(salePrice > 0 && salePrice <= 1 ether);
         vm.assume(saleAmount >= 10 ether && saleAmount <= 1000 ether);
         vm.assume(buyAmount > 0 && buyAmount <= saleAmount);
-        
+
         uint256 totalCost = salePrice * buyAmount;
         vm.assume(totalCost / salePrice == buyAmount); // Overflow check
         vm.assume(totalCost <= 1000 ether);
