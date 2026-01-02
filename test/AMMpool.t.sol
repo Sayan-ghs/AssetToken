@@ -67,7 +67,7 @@ contract AMMPoolTest is Test {
         // Second liquidity provider - need to give them tokens first
         vm.prank(provider1);
         token.transfer(provider2, 500 ether);
-        
+
         vm.prank(provider2);
         token.approve(address(pool), type(uint256).max);
         vm.deal(provider2, 1 ether);

@@ -51,7 +51,7 @@ contract PrimarySaleTest is Test {
         // - tokenAmount: Number of tokens in base units (2 tokens = 2 * 10^18)
         // - pricePerToken: Price in wei per token (1 wei = 1 ether per token due to multiplication)
         // - msg.value: Must equal pricePerToken * tokenAmount
-        
+
         vm.prank(seller);
         // Use pricePerToken = 1 wei (not 1 ether) to represent 1 ether per token
         sale.createSale(address(token), 1, 500 ether, block.timestamp, block.timestamp + 1 days);
@@ -60,7 +60,7 @@ contract PrimarySaleTest is Test {
 
         uint256 tokenAmount = 2 ether; // 2 tokens in base units
         uint256 totalCost = 1 * tokenAmount; // 1 wei * 2 ether = 2 ether ✓
-        
+
         vm.prank(buyer);
         sale.purchaseTokens{value: totalCost}(address(token), tokenAmount);
 

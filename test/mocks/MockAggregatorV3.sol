@@ -35,13 +35,23 @@ contract MockAggregatorV3 is AggregatorV3Interface {
         return _version;
     }
 
-    function getRoundData(uint80) external view override returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound) {
+    function getRoundData(uint80)
+        external
+        view
+        override
+        returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
+    {
         // Ensure startedAt doesn't underflow
         uint256 startedAtTime = block.timestamp >= 1 hours ? block.timestamp - 1 hours : block.timestamp;
         return (_roundId, _price, startedAtTime, _updatedAt, _answeredInRound);
     }
 
-    function latestRoundData() external view override returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound) {
+    function latestRoundData()
+        external
+        view
+        override
+        returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
+    {
         // Ensure startedAt doesn't underflow
         uint256 startedAtTime = block.timestamp >= 1 hours ? block.timestamp - 1 hours : block.timestamp;
         // Return actual values (not forced to be valid) so tests can check invalid scenarios

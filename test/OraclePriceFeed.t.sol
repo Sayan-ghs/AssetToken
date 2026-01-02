@@ -21,7 +21,7 @@ contract OraclePriceFeedTest is Test {
         token = new AssetToken("Test Token", "TEST", 1000 ether, owner);
 
         // Create mock price feed with 8 decimals and price of $100 (100 * 10^8)
-        mockFeed = new MockAggregatorV3(8, 100 * 10**8);
+        mockFeed = new MockAggregatorV3(8, 100 * 10 ** 8);
     }
 
     // ============ setPriceFeed Tests ============
@@ -36,7 +36,7 @@ contract OraclePriceFeedTest is Test {
         vm.expectEmit(true, true, false, false);
         emit OraclePriceFeed.PriceFeedSet(address(token), address(mockFeed));
         oracle.setPriceFeed(address(token), address(mockFeed));
-        
+
         // Verify it was actually set
         assertEq(oracle.tokenPriceFeed(address(token)), address(mockFeed));
     }
@@ -60,7 +60,7 @@ contract OraclePriceFeedTest is Test {
 
         (int256 price, uint8 decimals) = oracle.getPrice(address(token));
 
-        assertEq(price, 100 * 10**8);
+        assertEq(price, 100 * 10 ** 8);
         assertEq(decimals, 8);
     }
 
@@ -101,7 +101,7 @@ contract OraclePriceFeedTest is Test {
         (uint80 roundId, int256 price, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound) =
             oracle.getLatestRoundData(address(token));
 
-        assertEq(price, 100 * 10**8);
+        assertEq(price, 100 * 10 ** 8);
         assertGt(updatedAt, 0);
     }
 
@@ -116,15 +116,15 @@ contract OraclePriceFeedTest is Test {
         oracle.setPriceFeed(address(token), address(mockFeed));
 
         // Update price
-        mockFeed.setPrice(200 * 10**8);
+        mockFeed.setPrice(200 * 10 ** 8);
 
         (int256 newPrice,) = oracle.getPrice(address(token));
-        assertEq(newPrice, 200 * 10**8);
+        assertEq(newPrice, 200 * 10 ** 8);
     }
 
     function test_MultipleTokens() public {
         AssetToken token2 = new AssetToken("Token 2", "TKN2", 1000 ether, owner);
-        MockAggregatorV3 feed2 = new MockAggregatorV3(18, 50 * 10**18);
+        MockAggregatorV3 feed2 = new MockAggregatorV3(18, 50 * 10 ** 18);
 
         oracle.setPriceFeed(address(token), address(mockFeed));
         oracle.setPriceFeed(address(token2), address(feed2));
@@ -132,8 +132,8 @@ contract OraclePriceFeedTest is Test {
         (int256 price1,) = oracle.getPrice(address(token));
         (int256 price2,) = oracle.getPrice(address(token2));
 
-        assertEq(price1, 100 * 10**8);
-        assertEq(price2, 50 * 10**18);
+        assertEq(price1, 100 * 10 ** 8);
+        assertEq(price2, 50 * 10 ** 18);
     }
 }
 
