@@ -9,4 +9,4 @@
 	url = https://github.com/smartcontractkit/chainlink-brownie-contracts
 [submodule "lib/chainlink"]
 	path = lib/chainlink
-	url = https://github.com/smartcontractkit/chainlink
+	url = https://github.com/smartcontractkit/chainlink.git
