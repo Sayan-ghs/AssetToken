@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 
 contract AMMPool {
     address public token;
@@ -21,11 +22,26 @@ contract AMMPool {
     error KInvariantViolation();
     error InvalidAmounts();
 
-    event LiquidityAdded(address indexed provider, uint256 tokenAmount, uint256 ethAmount, uint256 liquidityMinted);
+    event LiquidityAdded(
+        address indexed provider,
+        uint256 tokenAmount,
+        uint256 ethAmount,
+        uint256 liquidityMinted
+    );
 
-    event LiquidityRemoved(address indexed provider, uint256 tokenAmount, uint256 ethAmount, uint256 liquidityBurned);
+    event LiquidityRemoved(
+        address indexed provider,
+        uint256 tokenAmount,
+        uint256 ethAmount,
+        uint256 liquidityBurned
+    );
 
-    event Swap(address indexed sender, address indexed tokenIn, uint256 amountIn, uint256 amountOut);
+    event Swap(
+        address indexed sender,
+        address indexed tokenIn,
+        uint256 amountIn,
+        uint256 amountOut
+    );
 
     constructor(address token_) {
         if (token_ == address(0)) {
@@ -34,7 +50,11 @@ contract AMMPool {
         token = token_;
     }
 
-    function addLiquidity(uint256 tokenAmount, uint256 minTokenAmount, uint256 minETHAmount) external payable {
+    function addLiquidity(
+        uint256 tokenAmount,
+        uint256 minTokenAmount,
+        uint256 minETHAmount
+    ) external payable {
         if (tokenAmount == 0 || msg.value == 0) {
             revert InvalidAmounts();
         }
@@ -52,7 +72,9 @@ contract AMMPool {
         } else {
             uint256 liquidityToken = (tokenAmount * totalSupply) / reserveToken;
             uint256 liquidityETH = (msg.value * totalSupply) / reserveETH;
-            liquidity = liquidityToken < liquidityETH ? liquidityToken : liquidityETH;
+            liquidity = liquidityToken < liquidityETH
+                ? liquidityToken
+                : liquidityETH;
 
             if (liquidity == 0) {
                 revert InsufficientLiquidity();
@@ -61,12 +83,19 @@ contract AMMPool {
             actualTokenAmount = (liquidity * reserveToken) / totalSupply;
             actualETHAmount = (liquidity * reserveETH) / totalSupply;
 
-            if (actualTokenAmount < minTokenAmount || actualETHAmount < minETHAmount) {
+            if (
+                actualTokenAmount < minTokenAmount ||
+                actualETHAmount < minETHAmount
+            ) {
                 revert InsufficientAmount();
             }
         }
 
-        bool success = tokenContract.transferFrom(msg.sender, address(this), actualTokenAmount);
+        bool success = tokenContract.transferFrom(
+            msg.sender,
+            address(this),
+            actualTokenAmount
+        );
         if (!success) {
             revert TransferFailed();
         }
@@ -75,7 +104,9 @@ contract AMMPool {
         reserveETH += actualETHAmount;
 
         if (msg.value > actualETHAmount) {
-            (bool refundSuccess,) = payable(msg.sender).call{value: msg.value - actualETHAmount}("");
+            (bool refundSuccess, ) = payable(msg.sender).call{
+                value: msg.value - actualETHAmount
+            }("");
             if (!refundSuccess) {
                 revert TransferFailed();
             }
@@ -83,10 +114,19 @@ contract AMMPool {
         totalSupply += liquidity;
         balanceOf[msg.sender] += liquidity;
 
-        emit LiquidityAdded(msg.sender, actualTokenAmount, actualETHAmount, liquidity);
+        emit LiquidityAdded(
+            msg.sender,
+            actualTokenAmount,
+            actualETHAmount,
+            liquidity
+        );
     }
 
-    function removeLiquidity(uint256 liquidity, uint256 minTokenAmount, uint256 minETHAmount) external {
+    function removeLiquidity(
+        uint256 liquidity,
+        uint256 minTokenAmount,
+        uint256 minETHAmount
+    ) external {
         if (liquidity == 0) {
             revert InvalidAmounts();
         }
@@ -111,7 +151,7 @@ contract AMMPool {
             revert TransferFailed();
         }
 
-        (bool ethSuccess,) = payable(msg.sender).call{value: ethAmount}("");
+        (bool ethSuccess, ) = payable(msg.sender).call{value: ethAmount}("");
         if (!ethSuccess) {
             revert TransferFailed();
         }
@@ -127,10 +167,14 @@ contract AMMPool {
             revert InsufficientLiquidity();
         }
 
+        // amountOut = (amountInWithFee * reserveToken) / (reserveETH * 10000 + amountInWithFee)
         uint256 amountInWithFee = msg.value * (10000 - FEE_BPS);
-        uint256 numerator = amountInWithFee * reserveToken;
         uint256 denominator = (reserveETH * 10000) + amountInWithFee;
-        uint256 amountOut = numerator / denominator;
+        uint256 amountOut = Math.mulDiv(
+            amountInWithFee,
+            reserveToken,
+            denominator
+        );
 
         if (amountOut < minTokensOut) {
             revert InsufficientOutput();
@@ -147,7 +191,10 @@ contract AMMPool {
         emit Swap(msg.sender, address(0), msg.value, amountOut);
     }
 
-    function swapTokensForETH(uint256 tokenAmountIn, uint256 minETHOut) external {
+    function swapTokensForETH(
+        uint256 tokenAmountIn,
+        uint256 minETHOut
+    ) external {
         if (tokenAmountIn == 0) {
             revert InvalidAmounts();
         }
@@ -155,15 +202,23 @@ contract AMMPool {
             revert InsufficientLiquidity();
         }
 
-        bool transferSuccess = IERC20(token).transferFrom(msg.sender, address(this), tokenAmountIn);
+        bool transferSuccess = IERC20(token).transferFrom(
+            msg.sender,
+            address(this),
+            tokenAmountIn
+        );
         if (!transferSuccess) {
             revert TransferFailed();
         }
 
+        // amountOut = (amountInWithFee * reserveETH) / (reserveToken * 10000 + amountInWithFee)
         uint256 amountInWithFee = tokenAmountIn * (10000 - FEE_BPS);
-        uint256 numerator = amountInWithFee * reserveETH;
         uint256 denominator = (reserveToken * 10000) + amountInWithFee;
-        uint256 amountOut = numerator / denominator;
+        uint256 amountOut = Math.mulDiv(
+            amountInWithFee,
+            reserveETH,
+            denominator
+        );
 
         if (amountOut < minETHOut) {
             revert InsufficientOutput();
@@ -172,7 +227,7 @@ contract AMMPool {
         reserveToken += tokenAmountIn;
         reserveETH -= amountOut;
 
-        (bool success,) = payable(msg.sender).call{value: amountOut}("");
+        (bool success, ) = payable(msg.sender).call{value: amountOut}("");
         if (!success) {
             revert TransferFailed();
         }
@@ -180,21 +235,21 @@ contract AMMPool {
         emit Swap(msg.sender, token, tokenAmountIn, amountOut);
     }
 
-    function getAmountOut(uint256 amountIn, bool ethIn) external view returns (uint256) {
+    function getAmountOut(
+        uint256 amountIn,
+        bool ethIn
+    ) external view returns (uint256) {
         if (reserveToken == 0 || reserveETH == 0) {
             return 0;
         }
 
+        uint256 amountInWithFee = amountIn * (10000 - FEE_BPS);
         if (ethIn) {
-            uint256 amountInWithFee = amountIn * (10000 - FEE_BPS);
-            uint256 numerator = amountInWithFee * reserveToken;
             uint256 denominator = (reserveETH * 10000) + amountInWithFee;
-            return numerator / denominator;
+            return Math.mulDiv(amountInWithFee, reserveToken, denominator);
         } else {
-            uint256 amountInWithFee = amountIn * (10000 - FEE_BPS);
-            uint256 numerator = amountInWithFee * reserveETH;
             uint256 denominator = (reserveToken * 10000) + amountInWithFee;
-            return numerator / denominator;
+            return Math.mulDiv(amountInWithFee, reserveETH, denominator);
         }
     }
 
@@ -215,4 +270,3 @@ contract AMMPool {
         }
     }
 }
-

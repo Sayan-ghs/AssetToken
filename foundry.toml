@@ -1,9 +1,23 @@
 [profile.default]
-remappings = [
-  "@chainlink/=lib/chainlink-brownie-contracts/"
-]
 src = "src"
 out = "out"
 libs = ["lib"]
 
-# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+# Force local-only execution without external RPC calls
+no_storage_caching = true
+gas_reports = ["*"]
+
+# Remappings go here, outside of rpc_endpoints
+remappings = [
+    "@chainlink/=lib/chainlink-brownie-contracts/",
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "forge-std/=lib/forge-std/src/"
+]
+
+[fuzz]
+runs = 128
+
+[invariant]
+runs = 20
+depth = 8
+fail_on_revert = false
