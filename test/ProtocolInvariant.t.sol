@@ -59,13 +59,7 @@ contract ProtocolInvariant is Test {
         initialK = rToken * rETH;
 
         // Deploy handler
-        handler = new ProtocolHandler(
-            token,
-            primarySale,
-            ammPool,
-            registry,
-            seller
-        );
+        handler = new ProtocolHandler(token, primarySale, ammPool, registry, seller);
 
         // Target the handler for fuzzing
         targetContract(address(handler));
@@ -81,9 +75,7 @@ contract ProtocolInvariant is Test {
 
     function invariant_noTokenMintFromNothing() public view {
         uint256 totalTracked =
-            token.balanceOf(seller) +
-            token.balanceOf(address(ammPool)) +
-            token.balanceOf(address(primarySale));
+            token.balanceOf(seller) + token.balanceOf(address(ammPool)) + token.balanceOf(address(primarySale));
         assertTrue(totalTracked <= INITIAL_SUPPLY);
     }
 

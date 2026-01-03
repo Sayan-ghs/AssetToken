@@ -24,7 +24,7 @@ contract ProtocolHandler is Test {
     //////////////////////////////////////////////////////////////*/
 
     uint256 public ghost_protocolETH; // ETH in primary sale
-    uint256 public ghost_ammETH;      // ETH in AMM
+    uint256 public ghost_ammETH; // ETH in AMM
 
     uint256 public callCount_registerAsset;
 
@@ -74,14 +74,8 @@ contract ProtocolHandler is Test {
         ethAmount = bound(ethAmount, 0.01 ether, 10 ether);
         if (actor.balance < ethAmount) return;
 
-        try primarySale.getSale(address(token)) returns (
-            PrimarySale.Sale memory sale
-        ) {
-            if (
-                !sale.active ||
-                block.timestamp < sale.startTime ||
-                block.timestamp >= sale.endTime
-            ) return;
+        try primarySale.getSale(address(token)) returns (PrimarySale.Sale memory sale) {
+            if (!sale.active || block.timestamp < sale.startTime || block.timestamp >= sale.endTime) return;
 
             uint256 tokenAmount = ethAmount / sale.pricePerToken;
             if (tokenAmount == 0) return;
@@ -139,11 +133,7 @@ contract ProtocolHandler is Test {
         vm.stopPrank();
     }
 
-    function addLiquidity(
-        uint256 seed,
-        uint256 tokenAmount,
-        uint256 ethAmount
-    ) public {
+    function addLiquidity(uint256 seed, uint256 tokenAmount, uint256 ethAmount) public {
         address actor = _actor(seed);
 
         tokenAmount = bound(tokenAmount, 1 ether, 100 ether);
@@ -155,7 +145,9 @@ contract ProtocolHandler is Test {
             vm.prank(seller);
             if (token.balanceOf(seller) >= tokenAmount) {
                 token.transfer(actor, tokenAmount);
-            } else return;
+            } else {
+                return;
+            }
         }
 
         vm.startPrank(actor);
@@ -194,9 +186,7 @@ contract ProtocolHandler is Test {
         supply = bound(supply, 1_000 ether, 1_000_000 ether);
 
         vm.prank(actor);
-        try new AssetToken("Test", "TEST", supply, actor) returns (
-            AssetToken newToken
-        ) {
+        try new AssetToken("Test", "TEST", supply, actor) returns (AssetToken newToken) {
             vm.prank(actor);
             try registry.registerAsset(address(newToken), "ipfs://test") {} catch {}
         } catch {}
