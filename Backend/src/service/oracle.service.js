@@ -1,16 +1,27 @@
-import { getFeeController } from "../blockchain/contracts.js";
+import { getOracle } from "../blockchain/contracts.js";
 
-export async function getFeeConfig(controllerAddress) {
-  const controller = getFeeController(controllerAddress);
+export async function getOraclePrice(oracleAddress) {
+  const oracle = getOracle(oracleAddress);
+  const price = await oracle.getLatestPrice();
 
   return {
-    primarySaleFee: (await controller.primarySaleFee()).toString(),
-    ammSwapFee: (await controller.ammSwapFee()).toString(),
-    liquidityFee: (await controller.liquidityFee()).toString(),
-    feeRecipient: await controller.feeRecipient()
+    price: price.toString(),
+    timestamp: Date.now()
   };
 }
 
-export function calculateFee(amount, feeBps) {
-  return (BigInt(amount) * BigInt(feeBps)) / 10_000n;
+export async function getOracleData(oracleAddress) {
+  const oracle = getOracle(oracleAddress);
+  const [price, decimals, description] = await Promise.all([
+    oracle.getLatestPrice(),
+    oracle.decimals(),
+    oracle.description()
+  ]);
+
+  return {
+    price: price.toString(),
+    decimals: Number(decimals),
+    description,
+    timestamp: Date.now()
+  };
 }

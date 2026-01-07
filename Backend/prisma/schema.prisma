@@ -1,0 +1,44 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Transfer {
+  id        String   @id
+  token     String
+  from      String
+  to        String
+  amount    String
+  txHash    String
+  block     Int
+  timestamp DateTime
+}
+
+model PrimarySale {
+  id        String   @id
+  token     String
+  buyer     String
+  amount    String
+  totalCost String
+  txHash    String
+  block     Int
+  timestamp DateTime
+}
+
+model Swap {
+  id        String   @id
+  pool      String
+  user      String
+  tokenIn   String
+  tokenOut  String
+  amountIn  String
+  amountOut String
+  txHash    String
+  block     Int
+  timestamp DateTime
+}
+
+
